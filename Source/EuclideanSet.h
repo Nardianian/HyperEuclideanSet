@@ -5,24 +5,24 @@
 #include <string>
 #include <algorithm>
 
-// Classe base per il calcolo delle sequenze Euclidee classiche
+// Base class for the computation of classical Euclidean sequences
 class Euclidean {
 public:
     Euclidean(int pulses = 1, int steps = 1);
     virtual ~Euclidean() {}
 
-    // Funzione per calcolare una sequenza Euclidea
+    // Function to calculate a Euclidean sequence
     virtual std::vector<int> generateSequence();
 
 protected:
-    int pulses;  // Numero di pulsazioni
-    int steps;   // Numero di step totali
-    std::vector<int> sequence; // Sequenza risultante
+    int pulses;  // Number of pulses
+    int steps;   // Number of total steps
+    std::vector<int> sequence; // Resulting sequence
 
-    void computeClassicEuclidean(); // Algoritmo Euclideo classico
+    void computeClassicEuclidean(); // Classical Euclidean algorithm
 };
 
-// Classe derivata per Euclidean ipereuclideo (HyperEuclidean)
+// Derived class for Euclidean Hypereuclidean (HyperEuclidean)
 class HyperEuclidean : public Euclidean {
 public:
     HyperEuclidean(int pulses = 1, int steps = 1, int depth = 1);
@@ -32,7 +32,7 @@ public:
     std::vector<int> velocities;
 
 private:
-    int depth;  // Profondità del calcolo ipereuclideo
+    int depth;  // Depth of hypereuclidean calculus
     void computeHyperEuclidean();
     void rotateSet(std::vector<int>& set, int n, int r);
     std::vector<int> selectByIndex(const std::vector<int>& source, const std::vector<int>& indices);

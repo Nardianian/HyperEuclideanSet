@@ -14,13 +14,12 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
-private:
-    // Riferimento al processor ridenominato
+private: 
     AudioPluginAudioProcessor& audioProcessor;
 
     juce::OwnedArray<juce::Label> labels;
 
-    // Struttura GUI aggiornata con i nuovi parametri della logica
+    // Updated GUI structure with logic parameters
     struct GuiRow
     {
         juce::Label rowLabel;               // Labels "R1", "R2"...
@@ -30,8 +29,8 @@ private:
         juce::Slider pulsesSlider;          // PULSES
         juce::Slider noteSlider;            // NOTE
         juce::Slider octaveSlider;          // OCTAVE
-        juce::ComboBox modeBox;             // MODE (Selezione Fixed/Input/Scale/Chord)
-        juce::ComboBox melModeBox;          // MEL (Selezione Continuum/Looped)
+        juce::ComboBox modeBox;             // MODE (Selection Fixed/Input/Scale/Chord)
+        juce::ComboBox melModeBox;          // MEL (Selection Continuum/Looped)
         juce::ToggleButton melStepBtn;
         juce::ComboBox typeBox;             // Selected Scale/Chords
         juce::Slider probSlider;            // PROBABILITY
@@ -40,7 +39,7 @@ private:
         juce::Slider velSlider;             // VELOCITY (VOLUME)
         juce::TextButton randBtn;           // RANDOMIZE
         juce::ComboBox chanBox;             // MIDI CHANNEL
-        juce::Slider mainVolSlider;         // NUOVO: Slider orizzontale per CC7
+        juce::Slider mainVolSlider;         // Horizontal slider for CC7
     };
 
     juce::OwnedArray<GuiRow> rows;

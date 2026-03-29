@@ -15,8 +15,8 @@ public:
     void releaseResources() override {}
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-    juce::AudioProcessorEditor* createEditor() override; // Rimosso nullptr
-    bool hasEditor() const override { return true; }     // Cambiato in true
+    juce::AudioProcessorEditor* createEditor() override; 
+    bool hasEditor() const override { return true; }     
 
     const juce::String getName() const override { return "EuclideanMidiGenerator"; }
     bool acceptsMidi() const override { return true; }
@@ -56,23 +56,23 @@ public:
         juce::AudioParameterInt* depth;
         juce::AudioParameterInt* accentSteps;
         juce::AudioParameterChoice* inputMode;
-        juce::AudioParameterChoice* melMode;      // Aggiornato da Bool a Choice
+        juce::AudioParameterChoice* melMode;      
         juce::AudioParameterFloat* gate;
-        juce::AudioParameterBool* useHyper;       // Puntatore mancante aggiunto
-        juce::AudioParameterFloat* probability;   // Aggiunto per il prossimo step
-        juce::AudioParameterFloat* swing;         // Parametro Swing (0-100%)
-        juce::AudioParameterFloat* velMult;       // Lo slider VEL (0.0 - 2.0)
-        juce::AudioParameterInt* midiChannel;     // Canale MIDI (1-16)
-        juce::AudioParameterInt* mainVolume;      // NUOVO: CC7 per Standalone (0-127)
+        juce::AudioParameterBool* useHyper;       
+        juce::AudioParameterFloat* probability;   
+        juce::AudioParameterFloat* swing;         
+        juce::AudioParameterFloat* velMult;       
+        juce::AudioParameterInt* midiChannel;     
+        juce::AudioParameterInt* mainVolume;      
 
-        // --- STATO PER IL GATE ---
-        int samplesUntilNoteOff = -1;  // -1 significa "nessuna nota attiva"
-        int lastNotePlayed = -1;       // Ricorda quale nota spegnere
+        // --- GATE STATE ---
+        int samplesUntilNoteOff = -1;  // -1 = "no active notes"
+        int lastNotePlayed = -1;       // Remember which note to turn off
 
-        std::unique_ptr<juce::MidiOutput> hardwareOutput; // Porta fisica dedicata
+        std::unique_ptr<juce::MidiOutput> hardwareOutput; // Dedicated physical port
         int currentDeviceIndex = -1;
 
-        // Dati interni
+        // Internal Data
         int lastInputNote = -1;
         int pitchIndex = 0;
         std::vector<int> pattern;
@@ -121,14 +121,14 @@ public:
         };
     }
 
-    juce::AudioProcessorValueTreeState parameters; // Deve essere pubblica per l'Editor
+    juce::AudioProcessorValueTreeState parameters; // Must be public to the Editor
     bool useInternalClock = false;
-    bool isInternalPlaying = false; // Stato Play/Stop per Standalone
-    double internalPhase = 0.0;     // Fase per il clock interno
-    double internalBpm = 120.0;     // BPM manuale per Standalone
+    bool isInternalPlaying = false; // Play/Stop State in Standalone
+    double internalPhase = 0.0;     // Internal clock phase
+    double internalBpm = 120.0;     // Manual BPM in Standalone
     double manualSampleTime = 0; 
 
-    // Gestione MIDI Standalone
+    // Standalone MIDI management
     void setRowMidiOutput(int rowIndex, int deviceIndex);
     juce::StringArray getMidiOutputList();
 
@@ -144,6 +144,5 @@ private:
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // Corretta macro con il nome della classe attuale
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessor)
 };

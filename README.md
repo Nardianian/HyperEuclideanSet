@@ -14,7 +14,7 @@ Todo:
 >
 > Fix the GUI
 >
-> OptimizeCPUloadand startup times (especially for standalone)
+> Optimize CPU load and startup times (especially for standalone)
 >
 > Other ...
 

@@ -1,10 +1,10 @@
 #include "EuclideanSet.h"
 
-// Implementazione della classe Euclidean
+// Euclidean Class
 Euclidean::Euclidean(int pulses, int steps) : pulses(pulses), steps(steps) {}
 
 void Euclidean::computeClassicEuclidean() {
-    // Implementazione dell'algoritmo Euclideo classico (come nel primo file)
+    // Euclideo classic
     if (pulses > steps)
         pulses = steps;
 
@@ -40,7 +40,7 @@ std::vector<int> Euclidean::generateSequence()
 {
     sequence.clear();
 
-    // Clamp di sicurezza
+    // Security Clamp
     if (steps <= 0)
         return sequence;
 
@@ -49,7 +49,7 @@ std::vector<int> Euclidean::generateSequence()
     if (pulses > steps)
         pulses = steps;
 
-    // Caso limite
+    // Limiting case
     if (pulses == 0)
     {
         sequence.resize(steps, 0);
@@ -62,7 +62,6 @@ std::vector<int> Euclidean::generateSequence()
         return sequence;
     }
 
-    // Algoritmo di Bjorklund (forma iterativa semplificata)
     std::vector<int> counts;
     std::vector<int> remainders;
 
@@ -82,8 +81,7 @@ std::vector<int> Euclidean::generateSequence()
     }
 
     counts.push_back(divisor);
-
-    // Build ricorsivo
+      
     std::function<void(int)> build = [&](int lvl)
     {
         if (lvl == -1)
@@ -106,7 +104,6 @@ std::vector<int> Euclidean::generateSequence()
 
     build(level);
 
-    // Normalizzazione finale (sicurezza)
     if ((int)sequence.size() > steps)
         sequence.resize(steps);
 
@@ -116,7 +113,6 @@ std::vector<int> Euclidean::generateSequence()
     return sequence;
 }
 
-// Implementazione della classe HyperEuclidean
 HyperEuclidean::HyperEuclidean(int pulses, int steps, int depth)
     : Euclidean(pulses, steps), depth(depth) {
 }
@@ -130,11 +126,9 @@ void HyperEuclidean::computeHyperEuclidean()
 {
     sequence.clear();
 
-    // --- 1. Euclidean base (binaria) ---
     Euclidean base(pulses, steps);
     std::vector<int> basePattern = base.generateSequence();
 
-    // Estrai onset positions
     std::vector<int> onsets;
     for (int i = 0; i < (int)basePattern.size(); ++i)
         if (basePattern[i] == 1)
@@ -146,29 +140,23 @@ void HyperEuclidean::computeHyperEuclidean()
         return;
     }
 
-    // --- 2. Hyper depth: riduzione tramite IOI ---
     for (int d = 1; d < depth; ++d)
     {
         int n = (int)onsets.size();
         if (n <= 1)
             break;
 
-        // Calcola IOI
         std::vector<int> ioi;
         for (int i = 0; i < n - 1; ++i)
             ioi.push_back(onsets[i + 1] - onsets[i]);
 
-        // wraparound
         ioi.push_back(steps - onsets.back() + onsets.front());
 
-        // Numero di selezioni (riduzione progressiva)
         int k = std::max(1, n / 2);
 
-        // Euclidean sugli IOI
         Euclidean ioiEuclid(k, n);
         std::vector<int> selector = ioiEuclid.generateSequence();
 
-        // Selezione gerarchica (come operator- del tuo codice storico)
         std::vector<int> nextOnsets;
         for (int i = 0; i < n; ++i)
         {
@@ -181,7 +169,6 @@ void HyperEuclidean::computeHyperEuclidean()
             break;
     }
 
-    // --- 3. Ricostruzione pattern binario finale ---
 sequence.resize(steps, 0);
 velocities.resize(steps, 0);
 
@@ -193,14 +180,12 @@ if (onsets.size() == 1)
     return;
 }
 
-// Calcola IOI finali
 std::vector<int> ioi;
 for (size_t i = 0; i < onsets.size() - 1; ++i)
     ioi.push_back(onsets[i + 1] - onsets[i]);
 
 ioi.push_back(steps - onsets.back() + onsets.front());
 
-// Normalizzazione IOI -> velocity
 int maxIOI = *std::max_element(ioi.begin(), ioi.end());
 int minVel = 40;
 int maxVel = 115;
@@ -231,11 +216,9 @@ void HyperEuclidean::rotateSet(std::vector<int>& set, int n, int r) {
     std::vector<int> rotated;
     rotated.reserve(set.size());
 
-    // Prima parte rotata
     for (size_t i = idx; i < set.size(); ++i)
         rotated.push_back(set[i] + rr - n);
 
-    // Poi parte non ruotata
     for (size_t i = 0; i < idx; ++i)
         rotated.push_back(set[i] + rr);
 

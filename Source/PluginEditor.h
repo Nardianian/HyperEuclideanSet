@@ -16,12 +16,10 @@ public:
     void timerCallback() override;
 
 private:
-    // Riferimento al processor ridenominato
     AudioPluginAudioProcessor& audioProcessor;
 
     juce::OwnedArray<juce::Label> labels;
 
-    // Struttura GUI aggiornata con i nuovi parametri della logica
     struct GuiRow
     {
         juce::Label rowLabel;               // Labels "R1", "R2"...
@@ -31,10 +29,10 @@ private:
         juce::Slider pulsesSlider;          // PULSES
         juce::Slider noteSlider;            // NOTE
         juce::Slider octaveSlider;          // OCTAVE
-        juce::ComboBox modeBox;             // MODE (Selezione Fixed/Input/Scale/Chord)
-        juce::ComboBox melModeBox;          // MEL (Selezione Continuum/Looped)
+        juce::ComboBox modeBox;             // MODE
+        juce::ComboBox melModeBox;          // MEL (Selection Continuum/Looped)
         juce::ToggleButton melStepBtn;
-        juce::ComboBox typeBox;             // Selected Scale/Chords
+        juce::ComboBox typeBox;             // if Selected Scale/Chords
         juce::Slider probSlider;            // PROBABILITY
         juce::Slider swingSlider;           // SWING
         juce::Slider gateSlider;            // GATE
@@ -42,7 +40,7 @@ private:
         juce::TextButton randBtn;           // RANDOMIZE
         juce::ComboBox chanBox;             // MIDI CHANNEL
         juce::TextButton learnBtn;          // Tasto LRN
-        juce::Slider mainVolSlider;         // NUOVO: Slider orizzontale per CC7
+        juce::Slider mainVolSlider;         // Volume Slider CC7
     };
 
     juce::OwnedArray<GuiRow> rows;
@@ -55,7 +53,7 @@ private:
     std::unique_ptr<juce::Slider> globalBpmSlider;
     std::unique_ptr<juce::ToggleButton> globalClockBtn;
     juce::TooltipWindow tooltipWindow{ this }; // Gestore automatico dei fumetti (Tooltip)
-    // Pulsanti Globali per Mappatura MIDI
+    // Global Buttons for MIDI Mapping
     std::unique_ptr<juce::TextButton> saveMidiMapBtn, loadMidiMapBtn;
     std::unique_ptr<juce::FileChooser> fileChooser;
 

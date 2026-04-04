@@ -15,8 +15,8 @@ public:
     void releaseResources() override {}
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-    juce::AudioProcessorEditor* createEditor() override; // Rimosso nullptr
-    bool hasEditor() const override { return true; }     // Cambiato in true
+    juce::AudioProcessorEditor* createEditor() override; 
+    bool hasEditor() const override { return true; }     
 
     const juce::String getName() const override { return "EuclideanMidiGenerator"; }
     bool acceptsMidi() const override { return true; }
@@ -61,23 +61,21 @@ public:
         juce::AudioParameterInt* depth;
         juce::AudioParameterInt* accentSteps;
         juce::AudioParameterChoice* inputMode;
-        juce::AudioParameterChoice* melMode;      // Aggiornato da Bool a Choice
+        juce::AudioParameterChoice* melMode;      
         juce::AudioParameterFloat* gate;
-        juce::AudioParameterBool* useHyper;       // Puntatore mancante aggiunto
-        juce::AudioParameterFloat* probability;   // Aggiunto per il prossimo step
-        juce::AudioParameterFloat* swing;         // Parametro Swing (0-100%)
-        juce::AudioParameterFloat* velMult;       // Lo slider VEL (0.0 - 2.0)
-        juce::AudioParameterInt* midiChannel;     // Canale MIDI (1-16)
-        juce::AudioParameterInt* mainVolume;      // NUOVO: CC7 per Standalone (0-127)
+        juce::AudioParameterBool* useHyper;       
+        juce::AudioParameterFloat* probability;   
+        juce::AudioParameterFloat* swing;         
+        juce::AudioParameterFloat* velMult;       
+        juce::AudioParameterInt* midiChannel;     
+        juce::AudioParameterInt* mainVolume;      
 
-        // --- STATO PER IL GATE ---
-        int samplesUntilNoteOff = -1;  // -1 significa "nessuna nota attiva"
-        int lastNotePlayed = -1;       // Ricorda quale nota spegnere
+        int samplesUntilNoteOff = -1;  
+        int lastNotePlayed = -1;       
 
-        std::unique_ptr<juce::MidiOutput> hardwareOutput; // Porta fisica dedicata
+        std::unique_ptr<juce::MidiOutput> hardwareOutput; 
         int currentDeviceIndex = -1;
 
-        // Dati interni
         int lastInputNote = -1;
         int pitchIndex = 0;
         std::vector<int> pattern;
@@ -87,7 +85,7 @@ public:
         int stepIndex = 0;
         int accentIndex = 0;
         // --- MIDI LEARN LOGIC ---
-        // Mappa: Numero CC -> ID Parametro (es: 74 -> "STEPS0")
+        // Map: Number CC -> ID Parameter (es: 74 -> "STEPS0")
         std::map<int, juce::String> midiMapping;
         int ccWaitingForAssignment = -1;
         juce::String paramWaitingForAssignment = "";
@@ -131,15 +129,14 @@ public:
         };
     }
 
-    juce::AudioProcessorValueTreeState parameters; // Deve essere pubblica per l'Editor
+    juce::AudioProcessorValueTreeState parameters; 
     juce::OwnedArray<Rhythm> rhythms;
     bool useInternalClock = false;
-    bool isInternalPlaying = false; // Stato Play/Stop per Standalone
-    double internalPhase = 0.0;     // Fase per il clock interno
-    double internalBpm = 120.0;     // BPM manuale per Standalone
+    bool isInternalPlaying = false; 
+    double internalPhase = 0.0;     
+    double internalBpm = 120.0;     
     double manualSampleTime = 0; 
 
-    // Gestione MIDI Standalone
     void setRowMidiOutput(int rowIndex, int deviceIndex);
     juce::StringArray getMidiOutputList();
 
@@ -154,6 +151,5 @@ private:
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // Corretta macro con il nome della classe attuale
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessor)
 };

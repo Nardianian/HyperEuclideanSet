@@ -9,7 +9,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto idx = juce::String(i);
 
-        // Get ALL parameters before creating the Rhythm object
+        // 1. Recupero TUTTI i parametri prima di creare l'oggetto Rhythm
         auto* active = dynamic_cast<juce::AudioParameterBool*>(parameters.getParameter("ACTIVE" + idx));
         auto* note = dynamic_cast<juce::AudioParameterInt*>(parameters.getParameter("NOTE" + idx));
         auto* steps = dynamic_cast<juce::AudioParameterInt*>(parameters.getParameter("STEPS" + idx));
@@ -17,10 +17,10 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto* depth = dynamic_cast<juce::AudioParameterInt*>(parameters.getParameter("DEPTH" + idx));
         auto* accentSteps = dynamic_cast<juce::AudioParameterInt*>(parameters.getParameter("ACCENTS" + idx));
 
-        // Object creation (no internal call to rebuildPattern)
+        // 2. Creazione oggetto (il costruttore NON deve più chiamare rebuildPattern internamente)
         auto* r = new Rhythm(active, note, steps, pulses, depth, accentSteps);
 
-        // Extra parameter connection
+        // 3. Collegamento parametri extra
         r->useHyper = dynamic_cast<juce::AudioParameterBool*>(parameters.getParameter("HYPER" + idx));
         r->inputMode = dynamic_cast<juce::AudioParameterChoice*>(parameters.getParameter("MODE" + idx));
         r->melMode = dynamic_cast<juce::AudioParameterChoice*>(parameters.getParameter("MEL_MODE" + idx));
@@ -58,10 +58,42 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 {
     juce::MidiBuffer incomingMidi;
     incomingMidi.addEvents(midi, 0, buffer.getNumSamples(), 0);
+    // --- LOGICA MIDI LEARN & REMOTE CONTROL ---
+    for (const auto metadata : incomingMidi)
+    {
+        const auto msg = metadata.getMessage();
+        if (msg.isController())
+        {
+            int ccNumber = msg.getControllerNumber();
+            float ccValue = msg.getControllerValue() / 127.0f;
+
+            for (auto* r : rhythms)
+            {
+                // 1. Se siamo in modalità LEARN, assegna questo CC
+                if (r->ccWaitingForAssignment == -2)
+                {
+                    // Rimuovi eventuali vecchi mapping per questo CC per evitare conflitti
+                    r->midiMapping.erase(ccNumber);
+                    r->midiMapping[ccNumber] = r->paramWaitingForAssignment;
+                    r->ccWaitingForAssignment = -1; // Fine Learn
+                    continue;
+                }
+
+                // 2. Se il CC ricevuto è mappato, aggiorna il parametro
+                if (r->midiMapping.count(ccNumber))
+                {
+                    if (auto* param = parameters.getParameter(r->midiMapping[ccNumber]))
+                    {
+                        param->setValueNotifyingHost(ccValue);
+                    }
+                }
+            }
+        }
+    }
     midi.clear();
     buffer.clear();
 
-    // Input MIDI
+    // 1. Input MIDI
     for (const auto metadata : incomingMidi)
     {
         const auto msg = metadata.getMessage();
@@ -72,7 +104,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         }
     }
 
-    // Timing (linked to GUI controllers)
+    // 2. Timing Ripristinato (Legato ai controlli della GUI)
     double currentSampleTime = 0;
 
     posInfo.isPlaying = isInternalPlaying;
@@ -84,7 +116,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     }
     else
     {
-        manualSampleTime = 0; // Return to the starting point when you press stop
+        manualSampleTime = 0; // Torna all'inizio quando premi stop
     }
     currentSampleTime = manualSampleTime;
 
@@ -98,22 +130,22 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     const double samplesPerSixteenth = samplesPerQuarter / 4.0;
     samplesPerStep = static_cast<int>(samplesPerSixteenth);
 
-    // Samples Loop
+    // 3. Loop Campioni
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
         double absoluteSample = currentSampleTime + (double)sample;
         int currentSixteenth = static_cast<int>(std::floor(absoluteSample / samplesPerSixteenth));
         int lastSixteenth = static_cast<int>(std::floor((absoluteSample - 1.0) / samplesPerSixteenth));
 
-        // Determines whether the specific sample is the start of a new 16th
+        // Determiniamo se questo specifico campione è l'inizio di un nuovo 16esimo
         bool isNewStep = (currentSixteenth > lastSixteenth);
 
         for (auto* r : rhythms)
         {
             if (!r->activated->get()) continue;
 
-            // --- NOTE OFF MANAGEMENT (GATE) ---
-            // This check is done on each sample for maximum precision.
+            // --- A. GESTIONE NOTE OFF (IL GATE) ---
+            // Questo controllo avviene ad ogni campione per massima precisione
             if (r->samplesUntilNoteOff > 0)
             {
                 r->samplesUntilNoteOff--;
@@ -130,13 +162,13 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                 }
             }
 
-            // --- TRIGGER LOGIC (ONLY ON NEW STEP) ---
+            // --- B. LOGICA DI TRIGGER (SOLO SU NUOVO STEP) ---
             if (isNewStep)
             {
                 if (r->needsRebuild.exchange(false) || r->pattern.empty())
                     r->rebuildPattern();
 
-                // PitchIndex advance logic (if active)
+                // Logica avanzamento PitchIndex (se attiva)
                 auto* advParam = parameters.getRawParameterValue("MEL_STEP_ADV" + juce::String(rhythms.indexOf(r)));
                 if (advParam != nullptr && advParam->load() > 0.5f)
                     r->pitchIndex++;
@@ -146,15 +178,16 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                     int noteToPlay = baseNote;
                     int mode = r->inputMode->getIndex();
 
-                    // Retrieve the octave directly from the parameter ("OCTAVE" + idx)
+                    // Recupero ottava direttamente dal parametro (esiste nel layout come "OCTAVE" + idx)
                     auto* octParam = parameters.getRawParameterValue("OCTAVE" + juce::String(rhythms.indexOf(r)));
                     int octShift = (octParam != nullptr) ? (int)octParam->load() : 0;
 
-                    // --- MELODIC LOGIC ---
+                    // --- LOGICA MELODICA ---
                     if (mode == 2) // SCALE
                     {
                         auto scales = getScalePresets();
-                        int scaleIdx = parameters.getRawParameterValue("TYPE" + juce::String(rhythms.indexOf(r)))->load();
+                        auto* typeParam = parameters.getRawParameterValue("TYPE" + juce::String(rhythms.indexOf(r)));
+                        int scaleIdx = typeParam ? juce::jlimit(0, (int)scales.size() - 1, (int)typeParam->load()) : 0;
                         if (scaleIdx >= 0 && scaleIdx < (int)scales.size())
                         {
                             const auto& intervals = scales[scaleIdx].intervals;
@@ -165,7 +198,8 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                     else if (mode == 3) // CHORD
                     {
                         auto chords = getChordPresets();
-                        int chordIdx = parameters.getRawParameterValue("TYPE" + juce::String(rhythms.indexOf(r)))->load();
+                        auto* typeParam = parameters.getRawParameterValue("TYPE" + juce::String(rhythms.indexOf(r)));
+                        int chordIdx = typeParam ? juce::jlimit(0, (int)chords.size() - 1, (int)typeParam->load()) : 0;
                         if (chordIdx >= 0 && chordIdx < (int)chords.size())
                         {
                             const auto& intervals = chords[chordIdx].intervals;
@@ -174,22 +208,22 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                         }
                     }
 
-                    // OCTAVE APPLICATION AND MIDI RANGE PROTECTION
+                    // APPLICAZIONE OTTAVA E PROTEZIONE RANGE MIDI
                     noteToPlay = juce::jlimit(0, 127, noteToPlay + (octShift * 12));
 
-                    // PitchIndex advance (if not controlled by the S/P key)
+                    // Avanzamento PitchIndex (se non gestito dal tasto S/P)
                     auto* advParam = parameters.getRawParameterValue("MEL_STEP_ADV" + juce::String(rhythms.indexOf(r)));
                     if (advParam == nullptr || advParam->load() < 0.5f)
                         r->pitchIndex = (r->pitchIndex + 1) % 128;
 
                     int safeChannel = juce::jlimit(1, 16, r->midiChannel->get());
 
-                    // --- DYNAMIC VELOCITY & CC7 ---
+                    // --- VELOCITY DINAMICA & CC7 ---
                     float multiplier = r->velMult != nullptr ? r->velMult->get() : 1.0f;
-                    // Accent: if the Euclidean accent pattern is 1, base velocity 120, otherwise 80
+                    // Accento: se il pattern euclideo degli accenti è 1, velocity base 120, altrimenti 80
                     int baseVel = (r->accentPattern[r->accentIndex % r->accentPattern.size()] == 1) ? 120 : 80;
                     int finalVel = juce::jlimit(0, 127, (int)(baseVel * multiplier));
-                    if (finalVel < 10 && multiplier > 0.1f) finalVel = 100; // Protection: If too low, strength to 100
+                    if (finalVel < 10 && multiplier > 0.1f) finalVel = 100; // Protezione: se troppo bassa, forza a 100
 
                     if (juce::JUCEApplication::isStandaloneApp() && r->hardwareOutput != nullptr)
                     {
@@ -199,7 +233,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                         r->hardwareOutput->sendMessageNow(volMsg);
                     }
 
-                    // --- NOTE TRIGGER ---
+                    // --- TRIGGER NOTA ---
                     float gateValue = r->gate != nullptr ? r->gate->get() : 0.5f;
                     r->samplesUntilNoteOff = static_cast<int>(samplesPerSixteenth * gateValue);
                     r->lastNotePlayed = noteToPlay;
@@ -210,7 +244,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                     midi.addEvent(onMsg, sample);
                 }
 
-                // Increase in indices
+                // Incremento indici
                 int nextStep = (r->stepIndex + 1) % (int)r->pattern.size();
                 if (nextStep == 0 && r->melMode->getIndex() == 1)
                     r->pitchIndex = 0;
@@ -227,21 +261,21 @@ AudioPluginAudioProcessor::Rhythm::Rhythm(juce::AudioParameterBool* a, juce::Aud
     juce::AudioParameterInt* s, juce::AudioParameterInt* p, juce::AudioParameterInt* d, juce::AudioParameterInt* ac)
     : activated(a), midiNote(n), steps(s), pulses(p), depth(d), accentSteps(ac)
 {
-    // Leave blank: the first call to rebuildPattern() is made by the Processor
-    // after all pointers (HYPER, MODE, etc.) have been assigned.
+    // Lasciare vuoto: la prima chiamata a rebuildPattern() viene fatta dal Processor
+    // dopo che tutti i puntatori (HYPER, MODE, ecc.) sono stati assegnati.
 }
 
 void AudioPluginAudioProcessor::Rhythm::rebuildPattern()
 {
-    // Avoid resetting the pitch index here to continue the melody
-    // even when changing Steps/Pulses (Continuum mode)
+    // Non resettiamo pitchIndex qui se vogliamo che la melodia continui 
+    // a scorrere anche se cambiamo Steps/Pulses (Continuum mode)
     if (melMode != nullptr && melMode->getIndex() == 1) // Se "Looped"
         pitchIndex = 0;
 
     stepIndex = 0;
     accentIndex = 0;
 
-    // Null pointer protection
+    // Protezione contro i puntatori nulli
     bool hyperActive = (useHyper != nullptr) ? useHyper->get() : false;
     int currentDepth = (depth != nullptr) ? depth->get() : 1;
     if (!hyperActive || currentDepth <= 1) {
@@ -261,7 +295,7 @@ void AudioPluginAudioProcessor::Rhythm::rebuildPattern()
         accentPattern = accentEuclid.generateSequence();
     }
 
-    // ADD DIAGNOSTICS:
+    // AGGIUNTA DIAGNOSTICA:
     DBG("PATTERN REBUILT - Steps: " << steps->get() << " Pulses: " << pulses->get());
 }
 
@@ -292,7 +326,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
         juce::StringArray typeItems;
         for (auto& p : getScalePresets()) typeItems.add(p.name);
         layout.add(std::make_unique<juce::AudioParameterInt>("TYPE" + idx, "Type " + idx, 0, 100, 0));
-        // Note: Make sure the saved index does not exceed the size of the presets in the processBlock
+        // Nota: Assicurati che l'indice salvato non superi la dimensione dei preset nel processBlock
     }
     return layout;
 }
@@ -328,20 +362,20 @@ void AudioPluginAudioProcessor::setRowMidiOutput(int rowIndex, int deviceIndex)
 {
     auto devices = juce::MidiOutput::getAvailableDevices();
 
-    // If the index from the GUI is <= 0 (so -1 or 0), close the hardware output
+    // Se l'indice dalla GUI è <= 0 (quindi -1 o 0), chiudiamo l'output hardware
     if (deviceIndex <= 0)
     {
         rhythms[rowIndex]->hardwareOutput = nullptr;
-        DBG("MIDI OUT Row " << rowIndex << " -> Deactivated (Index: " << deviceIndex << ")");
+        DBG("MIDI OUT Row " << rowIndex << " -> Disattivato (Index: " << deviceIndex << ")");
         return;
     }
 
-    // Calculate the actual index (ComboBox index 1 = Device index 0)
+    // Calcoliamo l'indice reale (ComboBox index 1 = Device index 0)
     int actualDeviceIdx = deviceIndex - 1;
 
     if (actualDeviceIdx >= 0 && actualDeviceIdx < devices.size())
     {
-        rhythms[rowIndex]->hardwareOutput = nullptr; // Previous Reset
+        rhythms[rowIndex]->hardwareOutput = nullptr; // Reset precedente
 
         auto newDevice = juce::MidiOutput::openDevice(devices[actualDeviceIdx].identifier);
 
@@ -349,16 +383,16 @@ void AudioPluginAudioProcessor::setRowMidiOutput(int rowIndex, int deviceIndex)
         {
             rhythms[rowIndex]->hardwareOutput = std::move(newDevice);
             rhythms[rowIndex]->hardwareOutput->startBackgroundThread();
-            // DBG("SUCCESS: Row " << rowIndex << " open up " << devices[actualDeviceIdx].name);
+            // DBG("SUCCESS: Row " << rowIndex << " aperta su " << devices[actualDeviceIdx].name);
         }
         else
         {
-            DBG("ERROR: Unable to open " << devices[actualDeviceIdx].name);
+            DBG("ERRORE: Impossibile aprire " << devices[actualDeviceIdx].name);
         }
     }
     else
     {
-        DBG("ERROR: Index out of range (" << actualDeviceIdx << ")");
+        DBG("ERRORE: Indice fuori range (" << actualDeviceIdx << ")");
         rhythms[rowIndex]->hardwareOutput = nullptr;
     }
 }
@@ -366,6 +400,48 @@ void AudioPluginAudioProcessor::setRowMidiOutput(int rowIndex, int deviceIndex)
 juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
 {
     return new AudioPluginAudioProcessorEditor(*this);
+}
+
+void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+{
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+    auto* midiXml = xml->createNewChildElement("MIDI_MAPPINGS");
+    for (int i = 0; i < rhythms.size(); ++i) {
+        auto* rowXml = midiXml->createNewChildElement("ROW_" + juce::String(i));
+        for (auto const& [cc, paramID] : rhythms[i]->midiMapping) {
+            auto* mapEntry = rowXml->createNewChildElement("MAP");
+            mapEntry->setAttribute("CC", cc);
+            mapEntry->setAttribute("ID", paramID);
+        }
+    }
+    copyXmlToBinary(*xml, destData);
+}
+
+void AudioPluginAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState != nullptr && xmlState->hasTagName(parameters.state.getType())) {
+        parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+        if (auto* midiXml = xmlState->getChildByName("MIDI_MAPPINGS")) {
+            for (int i = 0; i < rhythms.size(); ++i) {
+                rhythms[i]->midiMapping.clear();
+                if (auto* rowXml = midiXml->getChildByName("ROW_" + juce::String(i))) {
+                    auto* child = rowXml->getFirstChildElement();
+                    while (child != nullptr) {
+                        if (child->hasTagName("MAP")) {
+                            int cc = child->getIntAttribute("CC");
+                            juce::String id = child->getStringAttribute("ID");
+                            rhythms[i]->midiMapping[cc] = id;
+                        }
+                        child = child->getNextElement();
+                    }
+                }
+            }
+        }
+    }
 }
 
 void AudioPluginAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
@@ -381,4 +457,59 @@ void AudioPluginAudioProcessor::parameterChanged(const juce::String& parameterID
     }
 }
 
+void AudioPluginAudioProcessor::saveMidiMappingToFile(const juce::File& file)
+{
+    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+
+    for (int i = 0; i < rhythms.size(); ++i) {
+        juce::DynamicObject::Ptr rowObj = new juce::DynamicObject();
+        for (auto const& [cc, id] : rhythms[i]->midiMapping) {
+            rowObj->setProperty(juce::String(cc), id);
+        }
+        obj->setProperty("Row" + juce::String(i), rowObj.get());
+    }
+
+    juce::FileOutputStream stream(file);
+    if (stream.openedOk()) {
+        stream.setPosition(0);
+        stream.truncate();
+        stream.writeString(juce::JSON::toString(obj.get()));
+    }
+}
+
+void AudioPluginAudioProcessor::loadMidiMappingFromFile(const juce::File& file)
+{
+    auto json = juce::JSON::parse(file);
+    if (auto* obj = json.getDynamicObject())
+    {
+        for (int i = 0; i < rhythms.size(); ++i)
+        {
+            rhythms[i]->midiMapping.clear();
+            juce::String rowName = "Row" + juce::String(i);
+
+            if (obj->hasProperty(rowName))
+            {
+                if (auto* rowObj = obj->getProperty(rowName).getDynamicObject())
+                {
+                    auto namedProps = rowObj->getProperties();
+                    for (int p = 0; p < namedProps.size(); ++p)
+                    {
+                        // Approccio ultra-sicuro per evitare E0135:
+                        // 1. Estraiamo il nome come Identifier
+                        juce::Identifier id = namedProps.getName(p);
+                        // 2. Convertiamo esplicitamente in String
+                        juce::String ccNameString = id.toString();
+                        // 3. Usiamo l'operatore int() o getIntValue() invece di getTrailingInt
+                        int cc = ccNameString.getIntValue();
+
+                        juce::String paramID = namedProps.getValueAt(p).toString();
+                        rhythms[i]->midiMapping[cc] = paramID;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Metodo obbligatorio per JUCE (da aggiungere in fondo se non presente)
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new AudioPluginAudioProcessor(); }

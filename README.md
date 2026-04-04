@@ -3,10 +3,12 @@
 rhythm geometry. Instead of traditional step-by-step programming, you
 define the "density" of notes within a time space, allowing for the
 creation of complex polyrhythms and generative melodies in
-seconds.<img src="./x0e14ugn.png"
+seconds.
+
+<img src="./x0e14ugn.png"
 style="width:6.69305in;height:3.57153in" />
 
-Added MIDI Learn (for liveperformance). 
+Added MIDI Learn system (for live performances). 
 
 Read the user manual for usage details.
 

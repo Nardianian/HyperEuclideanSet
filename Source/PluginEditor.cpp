@@ -5,7 +5,6 @@
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    // 1. Setup Labels (Riga 1)
     juce::StringArray headers = { "ID", "ON", "HYPER", "STEPS", "PULSES", "NOTE", "OCT", "MODE", "MEL", "S/P", "TYPE", "PROB", "SWING", "GATE", "VEL", "RAND", "PORT", "VOL", "CH", "LRN" };
     for (auto text : headers)
     {
@@ -14,7 +13,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         addAndMakeVisible(l);
     }
 
-    // 2. Setup 6 Righe (Righe 2-7)
     for (int i = 0; i < 6; ++i)
     {
         auto* row = rows.add(new GuiRow());
@@ -59,13 +57,11 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         addAndMakeVisible(row->melModeBox);
         addAndMakeVisible(row->typeBox); 
 
-        // --- AGGIUNTA CANALE MIDI ---
         row->chanBox.addItem("Any", 1); // ID 1 = Valore parametro 0
         for (int c = 1; c <= 16; ++c)
             row->chanBox.addItem(juce::String(c), c + 1);
         addAndMakeVisible(row->chanBox);
 
-        // --- AGGIUNTA MIDI LEARN button ---
         row->learnBtn.setButtonText("L");
         row->learnBtn.setTooltip("MIDI Learn per questa riga");
         addAndMakeVisible(row->learnBtn);
@@ -73,7 +69,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             juce::PopupMenu m;
             auto& rhythm = *audioProcessor.rhythms[i];
 
-            // Definizione degli slider mappabili per questa riga
             struct ParamMap { juce::String name; juce::String id; };
             std::vector<ParamMap> mappableParams = {
                 {"Steps", "STEPS"}, {"Pulses", "PULSES"}, {"Note", "NOTE"},
@@ -86,7 +81,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                 juce::String paramID = mappableParams[pIdx].id + juce::String(i);
                 int currentCC = -1;
 
-                // Cerca se questo parametro ha già un CC assegnato
                 for (auto const& [cc, id] : rhythm.midiMapping) {
                     if (id == paramID) { currentCC = cc; break; }
                 }
@@ -109,7 +103,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                     r.midiMapping.clear();
                 }
                 else {
-                    // Logica Toggle: se clicco lo stesso parametro già in attesa, annullo
+                    // Toggle Logic
                     juce::String targetID = mappableParams[result - 1].id + juce::String(i);
 
                     if (r.ccWaitingForAssignment == -2 && r.paramWaitingForAssignment == targetID) {
@@ -148,22 +142,22 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             };
         row->modeBox.onChange();
 
-        // Forza l'aggiornamento iniziale del menu TYPE basato sul valore corrente del parametro
-        // Cambia 'p' in 'typeParam' per evitare il conflitto con il parametro del costruttore
+        // Forces the initial update of the TYPE menu based on the current value of the parameter
+        // Change 'p' to 'typeParam' to avoid conflict with the constructor parameter
         if (auto* typeParam = audioProcessor.parameters.getRawParameterValue("TYPE" + idx))
             row->typeBox.setSelectedId((int)typeParam->load() + 1, juce::dontSendNotification);
 
-        // Label identificativa R1, R2...
+        // Labels R1, R2...
         row->rowLabel.setText("R" + juce::String(i + 1), juce::dontSendNotification);
         row->rowLabel.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(row->rowLabel);
 
-        // Selettore Porta MIDI specifica per questa riga (Solo Standalone)
+        // Porta MIDI selector
         if (juce::JUCEApplication::isStandaloneApp())
         {
             auto* ps = portSelectors.add(std::make_unique<juce::ComboBox>("Port" + idx));
 
-            // Lambda per rinfrescare la lista
+            // Lambda to refresh
             auto updateList = [this, ps] {
                 auto currentId = ps->getSelectedId();
                 ps->clear(juce::dontSendNotification);
@@ -178,7 +172,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                     ps->addItem(displayName, j + 2);
                 }
 
-                // Ripristiniamo l'ID PRIMA di impostare il tooltip
                 ps->setSelectedId(currentId, juce::dontSendNotification);
 
                 int selIdx = ps->getSelectedItemIndex();
@@ -188,20 +181,18 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                     ps->setTooltip("Seleziona uscita MIDI");
                 };
 
-            // TRUCCO: Aggiungiamo un listener che aggiorna la lista appena premi il mouse sul box
             struct ClickListener : public juce::MouseListener {
                 std::function<void()> onClick;
                 void mouseDown(const juce::MouseEvent&) override { if (onClick) onClick(); }
             };
             auto* listener = new ClickListener();
             listener->onClick = updateList;
-            ps->addMouseListener(listener, true); // true = intercetta anche i click sui figli
+            ps->addMouseListener(listener, true); // true interceptor
 
-            // Gestione della memoria del listener (evitiamo leak)
-            ps->addChildComponent(new juce::Label("", "")); // dummy per agganciare il listener se necessario, 
-            // ma più semplicemente lo lasciamo così.
+            // Listener Memory Management (no leak)
+            ps->addChildComponent(new juce::Label("", "")); // dummy for the listener 
 
-            updateList(); // Primo popolamento
+            updateList(); // First population
             ps->setSelectedId(1);
             ps->setTooltip("Seleziona la porta MIDI per questa riga");
 
@@ -209,7 +200,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
                 int selectedIdx = ps->getSelectedItemIndex();
                 audioProcessor.setRowMidiOutput(i, selectedIdx);
 
-                // Aggiorna il tooltip pescando il nome reale dal processore
+                // Tooltip Update
                 auto currentOutputs = audioProcessor.getMidiOutputList();
                 if (selectedIdx > 0 && (selectedIdx - 1) < currentOutputs.size())
                     ps->setTooltip(currentOutputs[selectedIdx - 1]);
@@ -238,14 +229,14 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         row->melStepBtn.setButtonText("S/P");
         buttonAttachments.add(std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.parameters, "MEL_STEP_ADV" + idx, row->melStepBtn));
 
-        // Setup Main Vol Slider (Solo linea e pallino)
+        // Setup Main Vol Slider
         row->mainVolSlider.setSliderStyle(juce::Slider::LinearHorizontal);
         row->mainVolSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         addAndMakeVisible(row->mainVolSlider);
         sliderAttachments.add(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.parameters, "MAIN_VOL" + idx, row->mainVolSlider));
     }
 
-    // Controlli Globali Standalone (Clock, Play, BPM)
+    // Global Controls Standalone (Clock, Play, BPM)
     if (juce::JUCEApplication::isStandaloneApp())
     {
         globalClockBtn = std::make_unique<juce::ToggleButton>("EXT MIDI CLOCK");
@@ -270,7 +261,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         addAndMakeVisible(*globalBpmSlider);
     }
 
-    // --- SETUP SAVE MIDI MAP (Aggiornato) ---
+    // --- SETUP SAVE MIDI MAP ---
     saveMidiMapBtn = std::make_unique<juce::TextButton>("SV");
     saveMidiMapBtn->setTooltip("Salva Mappatura MIDI in un file JSON");
     addAndMakeVisible(saveMidiMapBtn.get());
@@ -281,7 +272,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             });
         };
 
-    // --- SETUP LOAD MIDI MAP (Aggiornato: nome LD per non confonderlo con Learn) ---
+    // --- SETUP LOAD MIDI MAP (this is Not Midi Learn) ---
     loadMidiMapBtn = std::make_unique<juce::TextButton>("LD");
     loadMidiMapBtn->setTooltip("Carica Mappatura MIDI da un file JSON");
     addAndMakeVisible(loadMidiMapBtn.get());
@@ -292,35 +283,35 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
             });
         };
 
-    setResizable(true, true); // Abilita trascinamento bordi
-    setResizeLimits(1100, 650, 2560, 1440); // Imposta limiti minimi e massimi
+    setResizable(true, true); // to drag
+    setResizeLimits(1100, 650, 2560, 1440); // Limits
     setSize(1400, 750);
-    startTimer(100); // Controlla lo stato dei parametri ogni 100ms
+    startTimer(100); // Control the parameters state any 100ms
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // 1. Sfondo scuro professionale
+    // Background dark
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
     auto totalArea = getLocalBounds().reduced(10);
     auto headerHeight = 30;
     auto footerHeight = 40;
 
-    // 1. Sfondo dedicato per la riga Header (Labels)
+    // Background for Labels Header 
     auto headerArea = totalArea.removeFromTop(headerHeight);
-    g.setColour(juce::Colours::black.withAlpha(0.5f)); // Più scuro per far risaltare il bianco
+    g.setColour(juce::Colours::black.withAlpha(0.5f)); // more dark
     g.fillRect(headerArea);
 
-    // 2. Linea di separazione sotto l'header (leggermente più luminosa)
+    // 2. Line under the header 
     g.setColour(juce::Colours::white.withAlpha(0.15f));
     g.drawHorizontalLine(headerArea.getBottom(), (float)totalArea.getX(), (float)totalArea.getRight());
 
     auto areaSequencer = totalArea;
 
-    // 2. Linee di separazione orizzontali sottili (Punto 1: addio riquadri ingombranti)
+    // Line
     g.setColour(juce::Colours::white.withAlpha(0.1f));
 
     int rowH = areaSequencer.getHeight() / 6;
@@ -328,7 +319,7 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
     {
         int y = headerArea.getBottom() + (i * rowH);
 
-        // Applicazione degli offset richiesti per evitare sovrapposizioni
+        // offset
         if (i == 2) y -= 8;   // Tra R2 e R3
         if (i == 3) y -= 17;  // Tra R3 e R4
         if (i == 4) y -= 22;  // Tra R4 e R5
@@ -339,7 +330,7 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawHorizontalLine(y, (float)totalArea.getX(), (float)totalArea.getRight());
     }
 
-    // 3. Testo Versione nell'angolo (Punto 1 & 2)
+    // Version number
     g.setColour(juce::Colours::grey.withAlpha(0.6f));
     g.setFont(12.0f);
     juce::String ver = "v" + juce::String(ProjectInfo::versionString);
@@ -349,7 +340,7 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    // Aumentiamo le dimensioni generali nel costruttore: setSize(1300, 800);
+    // setSize(1300, 800);
     auto area = getLocalBounds().reduced(10);
     auto footerArea = area.removeFromBottom(40);
     auto headerArea = area.removeFromTop(30);
@@ -358,7 +349,7 @@ void AudioPluginAudioProcessorEditor::resized()
     const int cw = area.getWidth() / numCols;
     const int rowHeight = area.getHeight() / 6;
 
-    // Posizionamento controlli Footer (Corretto per std::unique_ptr)
+    // Footer controls
     int footerWidgetW = 150;
 
     if (globalPlayBtn != nullptr)
@@ -370,11 +361,11 @@ void AudioPluginAudioProcessorEditor::resized()
     if (globalClockBtn != nullptr)
         globalClockBtn->setBounds(footerArea.removeFromLeft(footerWidgetW).reduced(5));
 
-    // Posizionamento Labels (Spostamento verso sinistra specifico)
+    // Labels on left
     for (int i = 0; i < labels.size(); ++i)
     {
         auto lArea = headerArea.removeFromLeft(cw);
-        int offset = 0; // Spostamento in pixel (negativo = sinistra, positivo = destra)
+        int offset = 0; // placement in pixel 
 
         switch (i)
         {
@@ -417,7 +408,7 @@ void AudioPluginAudioProcessorEditor::resized()
             s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, cell.getWidth() - 5, 18);
             setCentred(s, cell, cell.getWidth() + 5, rowHeight - 10);
 
-            // Iniezione dinamica della formattazione del testo
+            // Dynamic text formatting injection
             if (&s == &row->noteSlider) {
                 s.textFromValueFunction = [](double v) {
                     return juce::MidiMessage::getMidiNoteName((int)v, true, true, 3);
@@ -433,7 +424,6 @@ void AudioPluginAudioProcessorEditor::resized()
             }
             };
 
-        // Posizioni naturali (senza offset) per coincidere con le colonne originali
         row->rowLabel.setBounds(rArea.removeFromLeft(cw * 0.6));
         setCentred(row->activeBtn, rArea.removeFromLeft(cw * 0.7), 20, 20); // Sotto ON
         setCentred(row->hyperBtn, rArea.removeFromLeft(cw * 0.7), 20, 20);  // Sotto HYPER
@@ -457,7 +447,6 @@ void AudioPluginAudioProcessorEditor::resized()
 
         setCentred(row->randBtn, rArea.removeFromLeft(cw * 0.6), 28, comboH);
 
-        // ZONA MIDI: PORT resta al suo posto, CH si sposta a destra
         auto midiGroupArea = rArea;
         auto portCell = rArea.removeFromLeft(cw * 1.1);
         auto chanCell = rArea.removeFromLeft(cw * 0.8).translated(70, 0); // Spostato a destra di 2.5cm
@@ -467,7 +456,6 @@ void AudioPluginAudioProcessorEditor::resized()
             setCentred(*portSelectors[i], portCell.removeFromTop(rowHeight * 0.5), comboW, comboH);
             setCentred(row->chanBox, chanCell.removeFromTop(rowHeight * 0.5), comboW - 5, comboH);
 
-            // VOL Slider copre lo spazio tra PORT e il nuovo CH
             int volWidth = chanCell.getRight() - portCell.getX() - 10;
             row->mainVolSlider.setBounds(portCell.getX() + 5, midiGroupArea.getCentreY() + 4, volWidth, 14);
         }
@@ -476,20 +464,19 @@ void AudioPluginAudioProcessorEditor::resized()
             setCentred(row->chanBox, chanCell, comboW - 5, comboH);
             row->mainVolSlider.setVisible(false);
         }
-        // Posizionamento LRN Button (a destra di CH)
+
         auto lrnCell = rArea.removeFromLeft(cw * 0.7).translated(85, 0);
         setCentred(row->learnBtn, lrnCell, 28, 20);
     }
-    // Posizionamento pulsanti S/L sotto l'ultima "L" della colonna LRN
+
     if (rows.size() > 0 && saveMidiMapBtn != nullptr && loadMidiMapBtn != nullptr)
     {
-        // Riferimento all'ultimo pulsante "L" della riga 6
         auto lastLearnBounds = rows[rows.size() - 1]->learnBtn.getBounds();
 
         int btnW = 30;
         int btnH = 20;
         int gapTraBottoni = 6;
-        int offsetVerticale = 44; // Spostamento richiesto di 44 pixel sotto l'ultima L
+        int offsetVerticale = 44; 
 
         int centroX = lastLearnBounds.getCentreX();
         int coordinataY = lastLearnBounds.getY() + offsetVerticale;
@@ -505,7 +492,6 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     {
         auto& r = *audioProcessor.rhythms[i];
 
-        // Se il processore ha finito il learn o è stato annullato
         if (r.ccWaitingForAssignment == -1)
         {
             if (rows[i]->learnBtn.getButtonText() == "?")

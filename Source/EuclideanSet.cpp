@@ -1,10 +1,10 @@
 #include "EuclideanSet.h"
 
-// Implementation of the Euclidean class
+// Implementazione della classe Euclidean
 Euclidean::Euclidean(int pulses, int steps) : pulses(pulses), steps(steps) {}
 
 void Euclidean::computeClassicEuclidean() {
-    // Implementation of the classical Euclidean algorithm
+    // Implementazione dell'algoritmo Euclideo classico (come nel primo file)
     if (pulses > steps)
         pulses = steps;
 
@@ -62,7 +62,7 @@ std::vector<int> Euclidean::generateSequence()
         return sequence;
     }
 
-    // Bjorklund's algorithm (simplified iterative form)
+    // Algoritmo di Bjorklund (forma iterativa semplificata)
     std::vector<int> counts;
     std::vector<int> remainders;
 
@@ -83,7 +83,7 @@ std::vector<int> Euclidean::generateSequence()
 
     counts.push_back(divisor);
 
-    // Recursive build
+    // Build ricorsivo
     std::function<void(int)> build = [&](int lvl)
     {
         if (lvl == -1)
@@ -106,7 +106,7 @@ std::vector<int> Euclidean::generateSequence()
 
     build(level);
 
-    // Final normalization (safety)
+    // Normalizzazione finale (sicurezza)
     if ((int)sequence.size() > steps)
         sequence.resize(steps);
 
@@ -116,7 +116,7 @@ std::vector<int> Euclidean::generateSequence()
     return sequence;
 }
 
-// Implementation of the HyperEuclidean class
+// Implementazione della classe HyperEuclidean
 HyperEuclidean::HyperEuclidean(int pulses, int steps, int depth)
     : Euclidean(pulses, steps), depth(depth) {
 }
@@ -130,11 +130,11 @@ void HyperEuclidean::computeHyperEuclidean()
 {
     sequence.clear();
 
-    // --- 1. Euclidean base (binary) ---
+    // --- 1. Euclidean base (binaria) ---
     Euclidean base(pulses, steps);
     std::vector<int> basePattern = base.generateSequence();
 
-    // Extract onset positions
+    // Estrai onset positions
     std::vector<int> onsets;
     for (int i = 0; i < (int)basePattern.size(); ++i)
         if (basePattern[i] == 1)
@@ -146,14 +146,14 @@ void HyperEuclidean::computeHyperEuclidean()
         return;
     }
 
-    // --- 2. Hyper depth: reduction via IOI ---
+    // --- 2. Hyper depth: riduzione tramite IOI ---
     for (int d = 1; d < depth; ++d)
     {
         int n = (int)onsets.size();
         if (n <= 1)
             break;
 
-        // Calculate IOI
+        // Calcola IOI
         std::vector<int> ioi;
         for (int i = 0; i < n - 1; ++i)
             ioi.push_back(onsets[i + 1] - onsets[i]);
@@ -161,14 +161,14 @@ void HyperEuclidean::computeHyperEuclidean()
         // wraparound
         ioi.push_back(steps - onsets.back() + onsets.front());
 
-        // Number of selections (progressive reduction)
+        // Numero di selezioni (riduzione progressiva)
         int k = std::max(1, n / 2);
 
-        // Euclidean on IOI
+        // Euclidean sugli IOI
         Euclidean ioiEuclid(k, n);
         std::vector<int> selector = ioiEuclid.generateSequence();
 
-        // Hierarchical selection (as operator-)
+        // Selezione gerarchica (come operator- del tuo codice storico)
         std::vector<int> nextOnsets;
         for (int i = 0; i < n; ++i)
         {
@@ -181,7 +181,7 @@ void HyperEuclidean::computeHyperEuclidean()
             break;
     }
 
-    // --- 3. Final binary pattern reconstruction ---
+    // --- 3. Ricostruzione pattern binario finale ---
 sequence.resize(steps, 0);
 velocities.resize(steps, 0);
 
@@ -193,14 +193,14 @@ if (onsets.size() == 1)
     return;
 }
 
-// Calculate final IOIs
+// Calcola IOI finali
 std::vector<int> ioi;
 for (size_t i = 0; i < onsets.size() - 1; ++i)
     ioi.push_back(onsets[i + 1] - onsets[i]);
 
 ioi.push_back(steps - onsets.back() + onsets.front());
 
-//IOI normalization -> velocity
+// Normalizzazione IOI -> velocity
 int maxIOI = *std::max_element(ioi.begin(), ioi.end());
 int minVel = 40;
 int maxVel = 115;
@@ -231,11 +231,11 @@ void HyperEuclidean::rotateSet(std::vector<int>& set, int n, int r) {
     std::vector<int> rotated;
     rotated.reserve(set.size());
 
-    // First part rotated
+    // Prima parte rotata
     for (size_t i = idx; i < set.size(); ++i)
         rotated.push_back(set[i] + rr - n);
 
-    // Then unrotated part
+    // Poi parte non ruotata
     for (size_t i = 0; i < idx; ++i)
         rotated.push_back(set[i] + rr);
 
@@ -257,3 +257,4 @@ std::vector<int> HyperEuclidean::computeIOI(const std::vector<int>& set) {
     }
     return iois;
 }
+

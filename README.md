@@ -19,6 +19,8 @@ Todo:
 >
 > Optimize CPU load and startup times (especially for standalone)
 >
+> Support for new Windows MIDI Services
+>
 > Other ...
 
 Thanks for theinspiration to Andreas Sandersen (sandy999999) with his

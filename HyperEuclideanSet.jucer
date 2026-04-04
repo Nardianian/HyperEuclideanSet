@@ -9,7 +9,7 @@
               headerPath="C:/SDKs/asiosdk/common&#10;C:/Program Files/JACK2/include&#10;"
               lv2Uri="https://github.com/Nardianian/Euclid_Seq" aaxIdentifier="com.Nardianian.rhythm-generator"
               bundleIdentifier="com.Nardianian.rhythm-generator" companyWebsite="https://github.com/Nardianian"
-              companyName="Nardianian" version="1.0.5" pluginChannelConfigs="{0, 2}">
+              companyName="Nardianian" version="1.1.0" pluginChannelConfigs="{0, 2}">
   <MAINGROUP id="U4m7Pi" name="HyperEuclideanSet">
     <GROUP id="{41DA7DA6-D79A-C483-6EC8-0CFAD28A92D8}" name="Source">
       <FILE id="ctaXdX" name="EuclideanSet.cpp" compile="1" resource="0"

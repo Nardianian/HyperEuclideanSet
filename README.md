@@ -8,7 +8,7 @@ seconds.
 <img src="./x0e14ugn.png"
 style="width:6.69305in;height:3.57153in" />
 
-Added MIDI Learn system (for live performances). 
+With version 1.1.0 added MIDI Learn system (ideal for use in live performances). 
 
 Read the user manual for usage details.
 

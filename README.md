@@ -6,11 +6,12 @@ creation of complex polyrhythms and generative melodies in
 seconds.<img src="./x0e14ugn.png"
 style="width:6.69305in;height:3.57153in" />
 
+Added MIDI Learn (for liveperformance). 
+
 Read the user manual for usage details.
 
 Todo:
 
-> Add MIDI Learn (for liveperformance)
 >
 > Fix the GUI
 >

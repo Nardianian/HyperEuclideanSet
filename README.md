@@ -23,7 +23,7 @@ Todo:
 >
 > Other ...
 
-Thanks for theinspiration to Andreas Sandersen (sandy999999) with his
+Thanks for the inspiration to Andreas Sandersen (sandy999999) with his
 “Rhythm-generator” here
 
 [<u>https://github.com/sandy999999/rhythm-generator</u>](https://github.com/sandy999999/rhythm-generator))
